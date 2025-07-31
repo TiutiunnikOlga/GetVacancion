@@ -1,6 +1,8 @@
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import patch, MagicMock
-from src.classes import Work, HH, Vacancies
+
+from src.classes import HH, Vacancies
 
 
 # Фикстура для создания FileWorker
@@ -17,8 +19,9 @@ def file_worker():
 @pytest.fixture
 def mock_get(monkeypatch):
     mock_get = MagicMock()
-    monkeypatch.setattr('requests.get', mock_get)
+    monkeypatch.setattr("requests.get", mock_get)
     return mock_get
+
 
 # Остальные фикстуры остаются без изменений
 @pytest.fixture
@@ -30,13 +33,16 @@ def file_worker():
 
     return MockFileWorker()
 
+
 @pytest.fixture
 def hh_parser(file_worker):
     return HH(file_worker)
 
+
 @pytest.fixture
 def vacancies_parser(file_worker):
     return Vacancies(file_worker)
+
 
 # Исправляем тест загрузки вакансий
 def test_load_vacancies(mock_get, hh_parser):
@@ -48,7 +54,7 @@ def test_load_vacancies(mock_get, hh_parser):
                 "name": "Тестовая вакансия",
                 "alternate_url": "http://test.com",
                 "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
-                "published_at": "2025-07-31T11:42:11"
+                "published_at": "2025-07-31T11:42:11",
             }
         ]
     }
@@ -61,25 +67,16 @@ def test_load_vacancies(mock_get, hh_parser):
         "name": "Тестовая вакансия",
         "alternate_url": "http://test.com",
         "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
-        "published_at": "2025-07-31T11:42:11"
+        "published_at": "2025-07-31T11:42:11",
     }
     assert hh_parser.vacancies[0] == expected_vacancy
 
+
 # Тест парсинга зарплаты
 def test_parse_salary(vacancies_parser):
-    vacancy = {
-        "salary": {
-            "from": 50000,
-            "to": 100000,
-            "currency": "RUB"
-        }
-    }
+    vacancy = {"salary": {"from": 50000, "to": 100000, "currency": "RUB"}}
     result = vacancies_parser.parse_salary(vacancy)
-    assert result == {
-        "from": 50000,
-        "to": 100000,
-        "currency": "RUB"
-    }
+    assert result == {"from": 50000, "to": 100000, "currency": "RUB"}
 
 
 # Тест сохранения в файл
@@ -89,14 +86,14 @@ def test_save_to_file(vacancies_parser, file_worker):
             "name": "Тестировщик",
             "alternate_url": "http://test.com",
             "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
-            "published_at": "2025-07-31T11:42:11"
+            "published_at": "2025-07-31T11:42:11",
         }
     ]
 
     vacancies_parser.save_to_file("test.json")
     assert file_worker.filename == "test.json"
     assert len(file_worker.data) == 1
-    assert file_worker.data[0]['name'] == "Тестировщик"
+    assert file_worker.data[0]["name"] == "Тестировщик"
 
 
 if __name__ == "__main__":

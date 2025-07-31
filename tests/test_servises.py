@@ -1,5 +1,7 @@
 import pytest
-from src.servises import filter_vacancies, get_top_vacancies,get_vacancies_by_salary, sort_vacancies
+
+from src.servises import (filter_vacancies, get_top_vacancies,
+                          get_vacancies_by_salary, sort_vacancies)
 
 
 # Создаем тестовые данные
@@ -10,26 +12,26 @@ def test_vacancies():
             "name": "Python Developer",
             "salary": {"from": 100000, "to": 150000, "currency": "RUB"},
             "url": "http://example.com/1",
-            "published_at": "2025-07-30"
+            "published_at": "2025-07-30",
         },
         {
             "name": "Senior Python Developer",
             "salary": {"from": 200000, "to": 250000, "currency": "RUB"},
             "url": "http://example.com/2",
-            "published_at": "2025-07-29"
+            "published_at": "2025-07-29",
         },
         {
             "name": "Junior Python Developer",
             "salary": {"from": 80000, "to": 120000, "currency": "RUB"},
             "url": "http://example.com/3",
-            "published_at": "2025-07-31"
+            "published_at": "2025-07-31",
         },
         {
             "name": "Java Developer",
             "salary": {"from": 120000, "to": 180000, "currency": "RUB"},
             "url": "http://example.com/4",
-            "published_at": "2025-07-30"
-        }
+            "published_at": "2025-07-30",
+        },
     ]
 
 
