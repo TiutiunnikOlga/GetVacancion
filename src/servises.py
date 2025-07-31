@@ -34,7 +34,7 @@ def get_vacancies_by_salary(filtered_vacancies, salary_range):
 
             salary_info = vacancy.get("salary", {})
             if isinstance(salary_info, dict):
-                # Проверяем валюту (для примера проверяем только RUR)
+                # Проверяем валюту (проверяем только RUR)
                 if salary_info.get("currency") != "RUR":
                     continue
 
@@ -89,48 +89,3 @@ def print_vacancies(vacancies):
 
         print(f"  Ссылка: {vacancy.get('url', 'Не указана')}")
         print(f"  Дата публикации: {vacancy.get('published_at', 'Не указана')}\n")
-
-
-if __name__ == "__main__":
-    # Пример использования функций
-    # Создаем тестовые данные
-    test_vacancies = [
-        {
-            "name": "Python Developer",
-            "salary": {"from": 100000, "to": 150000, "currency": "RUB"},
-            "url": "http://example.com/1",
-            "published_at": "2025-07-30",
-        },
-        {
-            "name": "Senior Python Developer",
-            "salary": {"from": 200000, "to": 250000, "currency": "RUB"},
-            "url": "http://example.com/2",
-            "published_at": "2025-07-29",
-        },
-        {
-            "name": "Junior Python Developer",
-            "salary": {"from": 80000, "to": 120000, "currency": "RUB"},
-            "url": "http://example.com/3",
-            "published_at": "2025-07-31",
-        },
-    ]
-
-    # Пример фильтрации вакансий
-    filtered = filter_vacancies(
-        test_vacancies, filter_words=["python"], search_query="developer"
-    )
-
-    # Пример фильтрации по зарплате
-    salary_filtered = get_vacancies_by_salary(filtered, "100000-250000")
-
-    # Сортировка по зарплате
-    sorted_vacancies = sort_vacancies(
-        salary_filtered, sort_by="salary", ascending=False
-    )
-
-    # Получение топа вакансий
-    top_vacancies = get_top_vacancies(sorted_vacancies, top_n=2)
-
-    # Вывод результатов
-    print("Отфильтрованные и отсортированные вакансии:")
-    print_vacancies(top_vacancies)

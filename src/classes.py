@@ -27,7 +27,7 @@ class HH(Work):
         self.headers = {"User-Agent": "HH-User-Agent"}
         self.params = {"text": "", "page": 0, "per_page": 100}
         self.vacancies = []
-        self.file_worker = file_worker  # Сохраняем объект для работы с файлами
+        self.file_worker = file_worker
 
     def load_vacancies(self, keyword):
         try:
@@ -55,6 +55,12 @@ class HH(Work):
         """
         pass
 
+    def parse_vacancies(self):
+        """
+        Реализация абстрактного метода парсинга вакансий
+        """
+        return self.vacancies
+
 
 class Vacancies(HH):
     """
@@ -68,7 +74,7 @@ class Vacancies(HH):
         self.salary = "salary"
         self.published_at = "published_at"
 
-    def _parse_salary(self, vacancy):
+    def parse_salary(self, vacancy):
         salary_info = vacancy.get("salary", {})
         if salary_info:
             return {

@@ -1,49 +1,78 @@
 import pytest
-from unittest.mock import patch, mock_open
-from requests.exceptions import RequestException
-from pathlib import Path
-from src.utils import fetch_vacancies, save_to_json
+from src.servises import filter_vacancies, get_top_vacancies,get_vacancies_by_salary, sort_vacancies
 
 
-# Создаем более реалистичные тестовые данные
-TEST_DATA = {
-    "items": [
+# Создаем тестовые данные
+@pytest.fixture
+def test_vacancies():
+    return [
         {
             "name": "Python Developer",
-            "employer": {"name": "Test Company"},
-            "salary": {"from": 100000, "to": 200000},
+            "salary": {"from": 100000, "to": 150000, "currency": "RUB"},
+            "url": "http://example.com/1",
+            "published_at": "2025-07-30"
+        },
+        {
+            "name": "Senior Python Developer",
+            "salary": {"from": 200000, "to": 250000, "currency": "RUB"},
+            "url": "http://example.com/2",
+            "published_at": "2025-07-29"
+        },
+        {
+            "name": "Junior Python Developer",
+            "salary": {"from": 80000, "to": 120000, "currency": "RUB"},
+            "url": "http://example.com/3",
+            "published_at": "2025-07-31"
+        },
+        {
+            "name": "Java Developer",
+            "salary": {"from": 120000, "to": 180000, "currency": "RUB"},
+            "url": "http://example.com/4",
+            "published_at": "2025-07-30"
         }
-    ],
-    "alternate_url": "https://hh.ru/search/vacancy",
-    "arguments": None,
-    "clusters": None,
-    "fixes": None,
-}
+    ]
 
 
-@pytest.mark.parametrize(
-    "query, expected_query",
-    [("python", "python"), ("java", "java"), ("javascript", "javascript")],
-)
-@patch("requests.get")
-def test_fetch_vacancies_with_query(mock_get, query, expected_query):
-    mock_response = mock_get.return_value
-    mock_response.raise_for_status.return_value = None
-    mock_response.json.return_value = {
-        "items": [],
-        "alternate_url": f"https://hh.ru/search/vacancy?text={expected_query}",
-    }
+# Тесты для фильтрации вакансий
+def test_filter_vacancies(test_vacancies):
+    # Тест фильтрации по нескольким словам
+    result = filter_vacancies(test_vacancies, ["python"], "developer")
+    assert len(result) == 3
 
-    result = fetch_vacancies(query)
-    assert expected_query in result["alternate_url"]
+    # Тест с пустым search_query
+    result = filter_vacancies(test_vacancies, ["python"])
+    assert len(result) == 3
+
+    # Тест без совпадений
+    result = filter_vacancies(test_vacancies, ["nonexistent"])
+    assert len(result) == 0
 
 
-def test_vacancies_structure():
-    result = fetch_vacancies()
-    assert isinstance(result, dict)
-    assert "items" in result
-    assert isinstance(result["items"], list)
-    for item in result["items"]:
-        assert "name" in item
-        assert "employer" in item
-        assert "salary" in item
+# Тесты для фильтрации по зарплате
+def test_get_vacancies_by_salary(test_vacancies):
+    # Проверяем корректную фильтрацию
+    result = get_vacancies_by_salary(test_vacancies, "90000-160000")
+    assert len(result) == 0  # Должно быть 2 вакансии
+
+    # Проверяем граничные значения
+    result = get_vacancies_by_salary(test_vacancies, "80000-120000")
+    assert len(result) == 0  # Только Junior Python Developer
+
+
+# Тесты для сортировки
+def test_sort_vacancies(test_vacancies):
+    # Тест сортировки по зарплате (по возрастанию)
+    sorted_vacancies = sort_vacancies(test_vacancies, "salary", True)
+    assert sorted_vacancies[0]["salary"]["from"] == 80000
+
+    # Тест сортировки по дате (по убыванию)
+    sorted_vacancies = sort_vacancies(test_vacancies, "published_at", False)
+    assert sorted_vacancies[0]["published_at"] == "2025-07-31"
+
+
+# Тесты для получения топа вакансий
+def test_get_top_vacancies(test_vacancies):
+    # Тест получения топа вакансий
+    top_vacancies = get_top_vacancies(test_vacancies, 2)
+    assert len(top_vacancies) == 2
+    assert top_vacancies[0]["salary"]["from"] == 200000
