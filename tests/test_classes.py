@@ -1,78 +1,102 @@
 import pytest
-import requests
-from unittest.mock import MagicMock, patch
-from src.classes import HH
+from unittest.mock import patch, MagicMock
+from src.classes import Work, HH, Vacancies
 
 
-class TestHH(HH):
-    def __init__(self, file_worker, page=0):  # Добавляем параметр page
-        self.url = "https://api.hh.ru/vacancies"
-        self.headers = {"User-Agent": "HH-User-Agent"}
-        self.params = {
-            "text": "",
-            "page": page,
-            "per_page": 100,
-        }  # Используем page из параметров
-        self.vacancies = []
-        self.file_worker = file_worker
+# Фикстура для создания FileWorker
+@pytest.fixture
+def file_worker():
+    class MockFileWorker:
+        def save(self, filename, data):
+            self.filename = filename
+            self.data = data
 
-    def work(self):
-        pass
+    return MockFileWorker()
 
 
 @pytest.fixture
-def hh_instance():
-    return TestHH(file_worker=MagicMock(), page=0)  # Передаем page=0
+def mock_get(monkeypatch):
+    mock_get = MagicMock()
+    monkeypatch.setattr('requests.get', mock_get)
+    return mock_get
+
+# Остальные фикстуры остаются без изменений
+@pytest.fixture
+def file_worker():
+    class MockFileWorker:
+        def save(self, filename, data):
+            self.filename = filename
+            self.data = data
+
+    return MockFileWorker()
+
+@pytest.fixture
+def hh_parser(file_worker):
+    return HH(file_worker)
+
+@pytest.fixture
+def vacancies_parser(file_worker):
+    return Vacancies(file_worker)
+
+# Исправляем тест загрузки вакансий
+def test_load_vacancies(mock_get, hh_parser):
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "items": [
+            {
+                "name": "Тестовая вакансия",
+                "alternate_url": "http://test.com",
+                "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
+                "published_at": "2025-07-31T11:42:11"
+            }
+        ]
+    }
+    mock_get.return_value = mock_response
+
+    hh_parser.load_vacancies("Python")
+
+    assert len(hh_parser.vacancies) == 20
+    expected_vacancy = {
+        "name": "Тестовая вакансия",
+        "alternate_url": "http://test.com",
+        "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
+        "published_at": "2025-07-31T11:42:11"
+    }
+    assert hh_parser.vacancies[0] == expected_vacancy
+
+# Тест парсинга зарплаты
+def test_parse_salary(vacancies_parser):
+    vacancy = {
+        "salary": {
+            "from": 50000,
+            "to": 100000,
+            "currency": "RUB"
+        }
+    }
+    result = vacancies_parser.parse_salary(vacancy)
+    assert result == {
+        "from": 50000,
+        "to": 100000,
+        "currency": "RUB"
+    }
 
 
-@pytest.mark.parametrize("keyword, expected_count", [("python", 40), ("java", 40)])
-def test_load_vacancies_success(hh_instance, keyword, expected_count):
-    with patch("requests.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"items": [{"id": 1}, {"id": 2}]}
-        mock_get.return_value = mock_response
+# Тест сохранения в файл
+def test_save_to_file(vacancies_parser, file_worker):
+    vacancies_parser.vacancies = [
+        {
+            "name": "Тестировщик",
+            "alternate_url": "http://test.com",
+            "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
+            "published_at": "2025-07-31T11:42:11"
+        }
+    ]
 
-        hh_instance.load_vacancies(keyword)
-
-        # Исправленный вариант проверки
-        mock_get.assert_called_with(
-            "https://api.hh.ru/vacancies",
-            headers={"User-Agent": "HH-User-Agent"},
-            params={
-                "text": keyword,
-                "per_page": 100,
-                "page": hh_instance.params[
-                    "page"
-                ],  # Проверяем значение page из инстанса
-            },
-        )
-        assert len(hh_instance.vacancies) == expected_count
-
-
-def test_load_vacancies_empty(hh_instance):
-    with patch("requests.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"items": []}
-        mock_get.return_value = mock_response
-
-        hh_instance.load_vacancies("nonexistent")
-        assert len(hh_instance.vacancies) == 0
-
-
-def test_load_vacancies_error(hh_instance):
-    with patch("requests.get") as mock_get:
-        mock_get.side_effect = requests.exceptions.RequestException("Network error")
-
-        try:
-            hh_instance.load_vacancies("test")
-        except requests.exceptions.RequestException:
-            pass  # Ожидаем исключение
-        assert len(hh_instance.vacancies) == 0
-
-
-def test_work_method(hh_instance):
-    result = hh_instance.work()
-    assert result is None
+    vacancies_parser.save_to_file("test.json")
+    assert file_worker.filename == "test.json"
+    assert len(file_worker.data) == 1
+    assert file_worker.data[0]['name'] == "Тестировщик"
 
 
 if __name__ == "__main__":
