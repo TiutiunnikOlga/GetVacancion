@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
@@ -8,8 +9,11 @@ from requests import get
 # Загружаем переменные окружения
 load_dotenv()
 
+Vacancy = Dict[str, Any]
+VacanciesResponse = Dict[str, Any]
 
-def fetch_vacancies(query="python"):
+
+def fetch_vacancies(query: str = "python") -> Optional[VacanciesResponse]:
     """
     Функция для получения вакансий с HeadHunter API
     """
@@ -23,7 +27,7 @@ def fetch_vacancies(query="python"):
         return None
 
 
-def save_to_json(data, filename):
+def save_to_json(data: VacanciesResponse, filename: str) -> None:
     """
     Функция для сохранения данных в JSON файл
     """
@@ -39,7 +43,7 @@ def save_to_json(data, filename):
         print(f"Ошибка при записи файла: {e}")
 
 
-def load_vacancies_from_file(file_path):
+def load_vacancies_from_file(file_path: Path) -> List[Vacancy]:
     try:
         # Проверяем существование файла
         file_path = Path(file_path)
@@ -80,19 +84,19 @@ def load_vacancies_from_file(file_path):
 
 if __name__ == "__main__":
     # Получаем данные о вакансиях
-    vacancies = fetch_vacancies()
+    vacancies_response = fetch_vacancies()
 
-    if vacancies and "items" in vacancies:
+    if vacancies_response and "items" in vacancies_response:
         # Печатаем список вакансий
         print("Найденные вакансии:")
-        for item in vacancies["items"]:
+        for item in vacancies_response["items"]:
             print(f"- {item['name']} | {item['employer']['name']}")
 
         # Сохраняем данные в файл
-        save_to_json(vacancies, "python_vacancies")
+        save_to_json(vacancies_response, "python_vacancies")
     else:
         print("Не удалось получить данные о вакансиях")
 
-    vacancies = load_vacancies_from_file("data/python_vacancies.json")
+    vacancies = load_vacancies_from_file(Path("data/python_vacancies.json"))
     if not vacancies:
         print("Не удалось загрузить данные")

@@ -1,5 +1,15 @@
-def filter_vacancies(vacancies_list, filter_words, search_query=""):
-    filtered_vacancies = []
+from typing import Any, Dict, List, Union
+
+FilterWords = List[str]
+SalaryRange = str
+Vacancy = Dict[str, Any]
+SalaryInfo = Dict[str, Union[int, str]]
+
+
+def filter_vacancies(
+    vacancies_list: List[Vacancy], filter_words: FilterWords, search_query: str = ""
+) -> List[Vacancy]:
+    filtered_vacancies: List[Vacancy] = []
     for vacancy in vacancies_list:
         if isinstance(vacancy, dict):
             name = vacancy.get("name", "")
@@ -11,14 +21,16 @@ def filter_vacancies(vacancies_list, filter_words, search_query=""):
     return filtered_vacancies
 
 
-def get_vacancies_by_salary(filtered_vacancies, salary_range):
+def get_vacancies_by_salary(
+    filtered_vacancies: List[Vacancy], salary_range: SalaryRange
+) -> List[Vacancy]:
     try:
         min_salary, max_salary = map(int, salary_range.split("-"))
     except ValueError:
         print("Ошибка в формате диапазона зарплат. Используйте формат 'число-число'")
         return []
 
-    salary_vacancies = []
+    salary_vacancies: List[Vacancy] = []
 
     # Проверяем, если данные приходят списком списков
     if isinstance(filtered_vacancies[0], list):
@@ -47,7 +59,9 @@ def get_vacancies_by_salary(filtered_vacancies, salary_range):
     return salary_vacancies
 
 
-def sort_vacancies(vacancies, sort_by="salary", ascending=True):
+def sort_vacancies(
+    vacancies: List[Vacancy], sort_by: str = "salary", ascending: bool = True
+) -> list[Vacancy]:
     if not all(isinstance(v, dict) for v in vacancies):
         raise ValueError("Все элементы списка должны быть словарями")
 
@@ -64,7 +78,7 @@ def sort_vacancies(vacancies, sort_by="salary", ascending=True):
     return vacancies
 
 
-def get_top_vacancies(vacancies, top_n=10):
+def get_top_vacancies(vacancies: List[Vacancy], top_n: int = 10) -> List[Vacancy]:
     """
     Возвращает топ вакансий по зарплате
     """
@@ -72,7 +86,7 @@ def get_top_vacancies(vacancies, top_n=10):
     return sorted_vacancies[:top_n]
 
 
-def print_vacancies(vacancies):
+def print_vacancies(vacancies: List[Vacancy]) -> None:
     for idx, vacancy in enumerate(vacancies, 1):
         if not isinstance(vacancy, dict):
             print(f"Ошибка: элемент {idx} не является словарем")
