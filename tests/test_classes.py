@@ -1,100 +1,72 @@
-from unittest.mock import MagicMock
+import os
 
 import pytest
 
-from src.classes import HH, Vacancies
+from src.classes import HH, JSONFileWorker, Salary
 
 
-# Фикстура для создания FileWorker
+# Фикстуры
 @pytest.fixture
-def file_worker():
-    class MockFileWorker:
-        def save(self, filename, data):
-            self.filename = filename
-            self.data = data
-
-    return MockFileWorker()
-
-
-@pytest.fixture
-def mock_get(monkeypatch):
-    mock_get = MagicMock()
-    monkeypatch.setattr("requests.get", mock_get)
-    return mock_get
-
-
-# Остальные фикстуры остаются без изменений
-@pytest.fixture
-def file_worker():
-    class MockFileWorker:
-        def save(self, filename, data):
-            self.filename = filename
-            self.data = data
-
-    return MockFileWorker()
+def salary_fixture():
+    return Salary(50000, 70000, "RUB")
 
 
 @pytest.fixture
-def hh_parser(file_worker):
+def file_worker():
+    return JSONFileWorker()
+
+
+@pytest.fixture
+def hh_client(file_worker):
     return HH(file_worker)
 
 
-@pytest.fixture
-def vacancies_parser(file_worker):
-    return Vacancies(file_worker)
+# Тесты для класса Salary
+def test_salary_equality(salary_fixture):
+    assert salary_fixture == Salary(50000, 70000, "RUB")
+    assert salary_fixture != Salary(60000, 80000, "RUB")
 
 
-# Исправляем тест загрузки вакансий
-def test_load_vacancies(mock_get, hh_parser):
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "items": [
-            {
-                "name": "Тестовая вакансия",
-                "alternate_url": "http://test.com",
-                "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
-                "published_at": "2025-07-31T11:42:11",
-            }
-        ]
-    }
-    mock_get.return_value = mock_response
-
-    hh_parser.load_vacancies("Python")
-
-    assert len(hh_parser.vacancies) == 20
-    expected_vacancy = {
-        "name": "Тестовая вакансия",
-        "alternate_url": "http://test.com",
-        "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
-        "published_at": "2025-07-31T11:42:11",
-    }
-    assert hh_parser.vacancies[0] == expected_vacancy
+def test_salary_comparison(salary_fixture):
+    salary2 = Salary(60000, 80000, "RUB")
+    assert salary_fixture < salary2
+    assert salary2 > salary_fixture
+    assert salary_fixture <= Salary(50000, 70000, "RUB")
 
 
-# Тест парсинга зарплаты
-def test_parse_salary(vacancies_parser):
-    vacancy = {"salary": {"from": 50000, "to": 100000, "currency": "RUB"}}
-    result = vacancies_parser.parse_salary(vacancy)
-    assert result == {"from": 50000, "to": 100000, "currency": "RUB"}
+def test_salary_average(salary_fixture):
+    assert salary_fixture.get_average() == 60000.0
+    salary_to = Salary(None, 100000, "RUB")
+    assert salary_to.get_average() == 100000
+    salary_from = Salary(100000, None, "RUB")
+    assert salary_from.get_average() == 100000
 
 
-# Тест сохранения в файл
-def test_save_to_file(vacancies_parser, file_worker):
-    vacancies_parser.vacancies = [
-        {
-            "name": "Тестировщик",
-            "alternate_url": "http://test.com",
-            "salary": {"from": 100000, "to": 200000, "currency": "RUB"},
-            "published_at": "2025-07-31T11:42:11",
-        }
-    ]
-
-    vacancies_parser.save_to_file("test.json")
-    assert file_worker.filename == "test.json"
-    assert len(file_worker.data) == 1
-    assert file_worker.data[0]["name"] == "Тестировщик"
+def test_salary_str(salary_fixture):
+    assert str(salary_fixture) == "50000-70000 RUB"
+    salary_to = Salary(None, 100000, "RUB")
+    assert str(salary_to) == "до 100000 RUB"
+    salary_from = Salary(100000, None, "RUB")
+    assert str(salary_from) == "от 100000 RUB"
 
 
-if __name__ == "__main__":
-    pytest.main()
+# Тесты для FileWorker
+def test_file_worker_save_load(file_worker, tmpdir):
+    test_file = tmpdir.join("test_file.json")
+    data = {"key": "value"}
+    file_worker.save(str(test_file), data)
+    loaded_data = file_worker.load(str(test_file))
+    assert loaded_data == data
+
+
+def test_file_worker_delete(file_worker, tmpdir):
+    test_file = tmpdir.join("test_file.json")
+    file_worker.save(str(test_file), {"key": "value"})
+    file_worker.delete(str(test_file))
+    assert not os.path.exists(str(test_file))
+
+
+# Тесты для HH API
+def test_hh_initialization(hh_client):
+    assert hh_client.url == "https://api.hh.ru/vacancies"
+    assert hh_client.params["per_page"] == 100
